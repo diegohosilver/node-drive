@@ -4,7 +4,7 @@
 	"description": "simple app to test google drive api capabilities",
 	"main": "index.js",
 	"scripts": {
-		"start": "nodemon --watch public --ext js,html,json index.js",
+		"start": "nodemon --watch public --watch server --ext js,html,json ./server/index.js",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"author": "Diego Silvera de Souza",
