@@ -1,6 +1,7 @@
 // Api setup
 const express = require("express");
 const app = express();
+const formidable = require("formidable");
 const port = 3000;
 
 // Google drive middleware
@@ -9,6 +10,7 @@ const { GDrive } = require('./GDrive.js');
 // Allow node to serve static files from public directory
 app.use(express.static("public"));
 
+// Api endpoints
 app.get("/list-files", (req, res) => {
 
 	GDrive.assertAccess(oAuth2Client => {
@@ -29,6 +31,34 @@ app.get("/list-files", (req, res) => {
 				}
 			 }));
 		});
+	});
+});
+
+app.post("/upload-files", (req, res) => {
+
+	new formidable.IncomingForm().parse(req, (err, fields, files) => {
+
+		if (err) {
+
+			console.error('Error file', err);
+			return res.status(400).send({code: 'Error', message: 'An error ocurred when parsing file'});
+		}
+
+		GDrive.assertAccess(oAuth2Client => {
+
+			for (const file of Object.entries(files)) {
+				
+				// The entry is an array of tuples 'key - value'
+				GDrive.simpleUpload(oAuth2Client, file[1], (err, file) => {
+
+					if (err) {
+						return res.status(400).send({code: 'Error', message: `The API returned an error: ${err}`});
+					}
+
+					res.send({fileId: file.id});
+				});
+			}
+		})
 	});
 });
 

@@ -3,7 +3,7 @@ const fs = require("fs");
 const readline = require("readline");
 const { google } = require("googleapis");
 
-const SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly"];
+const SCOPES = ["https://www.googleapis.com/auth/drive"];
 const TOKEN_PATH = "token.json";
 
 class GDrive {
@@ -102,6 +102,7 @@ class GDrive {
 	/**
 	 * Lists the names and IDs of up to 10 files.
 	 * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
+	 * @param {function} callback Callback of the operation.
 	 */
 	static listFiles(auth, callback) {
 
@@ -114,6 +115,32 @@ class GDrive {
 			},
 			callback
 		);
+	}
+
+	/**
+	 * 
+	 * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
+	 * @param {function} callback Callback of the operation.
+	 */
+	static simpleUpload(auth, file, callback) {
+
+		let resource = {
+			name: file.name,
+		};
+
+		let media = {
+			mimeType: file.type,
+			body: fs.createReadStream(file.path)
+		};
+
+		const drive = google.drive({ version: "v3", auth });
+
+		drive.files.create({
+			resource,
+			media,
+			fields: 'id'
+		}, 
+		callback);
 	}
 }
 
