@@ -1,11 +1,25 @@
 <head>
 	<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
 <body>
 
 	<div id="app">
 		<h1>{{title}}</h1>
+		
+		<dl>
+			
+			<template v-for="file in files">
 
+				<dt>ID</dt>
+				<dd>{{file.id}}</dd>
+
+				<dt>Name</dt>
+				<dd>{{file.name}}</dd>
+
+			</template>
+
+		</dl>
 	</div>
 
 	<script>
@@ -18,8 +32,13 @@
 			},
 			data() {
 				return {
-					info: null
+					files: null
 				}
+			},
+			mounted() {
+				axios
+					.get('http://localhost:3000/list-files')
+					.then(response => this.files = response.data);
 			}
 		})
 	</script>
