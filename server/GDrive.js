@@ -7,6 +7,7 @@ const SCOPES = ["https://www.googleapis.com/auth/drive"];
 const TOKEN_PATH = "token.json";
 
 class GDrive {
+
 	/**
 	 * Asserts google drive access and then triggers the given callback
 	 * @param {function} callback
@@ -118,7 +119,7 @@ class GDrive {
 	}
 
 	/**
-	 * 
+	 * Uploads a single file with size of less than 5MB
 	 * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
 	 * @param {function} callback Callback of the operation.
 	 */
