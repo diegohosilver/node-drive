@@ -1,0 +1,19 @@
+{
+	"name": "node-drive",
+	"version": "0.1.0",
+	"description": "simple app to test google drive api capabilities",
+	"main": "index.js",
+	"scripts": {
+		"start": "nodemon --watch public --ext js,html,json index.js",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"author": "Diego Silvera de Souza",
+	"license": "MIT",
+	"dependencies": {
+		"express": "^4.17.1",
+		"googleapis": "^39.2.0"
+	},
+	"devDependencies": {
+		"nodemon": "^2.0.2"
+	}
+}
