@@ -88,7 +88,7 @@
 
 					formData.append('file', this.file);
 
-					axios.post('/upload-files', 
+					axios.post('/upload-files?uploadType=resumable', 
 						formData,
 						{
 							headers: {

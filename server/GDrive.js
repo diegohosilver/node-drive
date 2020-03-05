@@ -2,6 +2,7 @@
 const fs = require("fs");
 const readline = require("readline");
 const { google } = require("googleapis");
+const { GResumableUpload } = require("./GDriveResumableUpload.js");
 
 const SCOPES = ["https://www.googleapis.com/auth/drive"];
 const TOKEN_PATH = "token.json";
@@ -121,6 +122,7 @@ class GDrive {
 	/**
 	 * Uploads a single file with size of less than 5MB
 	 * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
+	 * @param {File} file A file to be uploaded.
 	 * @param {function} callback Callback of the operation.
 	 */
 	static simpleUpload(auth, file, callback) {
@@ -142,6 +144,39 @@ class GDrive {
 			fields: 'id'
 		}, 
 		callback);
+	}
+
+	/**
+	 * Uploads a single file using a resumable session
+	 * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
+	 * @param {File} file A file to be uploaded.
+	 * @param {function} callback Callback of the operation.
+	 */
+	static resumableUpload(auth, file, callback) {
+
+		let resumable = new GResumableUpload();
+		
+		resumable.tokens = auth.credentials;
+		resumable.filepath = file.path;
+		resumable.fileSize = file.size;
+		resumable.mimeType = file.type;
+		resumable.metadata = {
+			name: file.name
+		};
+		resumable.retry = 3;
+
+		resumable.on('progress', function (progress) {
+			console.log(progress);
+		});
+		resumable.on('success', function (success) {
+			callback(null, success)
+		});
+		resumable.on('error', function (error) {
+			console.log(error);
+			callback(error)
+		});
+
+		resumable.upload();
 	}
 }
 
