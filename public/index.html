@@ -1,28 +1,50 @@
+<!DOCTYPE html>
 <head>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.0/css/bulma.min.css">
+
 	<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+	<script src="./Menu.js"></script>
 </head>
 <body>
 
 	<div id="app">
-		<h1>{{title}}</h1>
-		
-		<dl>
-			
-			<template v-for="file in files">
 
-				<dt>ID</dt>
-				<dd>{{file.id}}</dd>
+		<section>
 
-				<dt>Name</dt>
-				<dd>{{file.name}}</dd>
+			<my-menu></my-menu>
 
-			</template>
+		</section>
 
-		</dl>
+		<section class="section">
+
+			<div class="container">
+
+				<h1 class="title">{{title}}</h1>
+				
+				<dl>
+					
+					<template v-for="file in files">
+
+						<dt>ID</dt>
+						<dd>{{file.id}}</dd>
+
+						<dt>Name</dt>
+						<dd>{{file.name}}</dd>
+
+					</template>
+
+				</dl>
+			</div>
+
+		</section>
+
 	</div>
 
 	<script>
+
 		new Vue({
 			el: '#app',
 			computed: {

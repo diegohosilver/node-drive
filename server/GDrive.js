@@ -2,11 +2,13 @@
 const fs = require("fs");
 const readline = require("readline");
 const { google } = require("googleapis");
+const { GResumableUpload } = require("./GDriveResumableUpload.js");
 
-const SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly"];
+const SCOPES = ["https://www.googleapis.com/auth/drive"];
 const TOKEN_PATH = "token.json";
 
 class GDrive {
+
 	/**
 	 * Asserts google drive access and then triggers the given callback
 	 * @param {function} callback
@@ -102,6 +104,7 @@ class GDrive {
 	/**
 	 * Lists the names and IDs of up to 10 files.
 	 * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
+	 * @param {function} callback Callback of the operation.
 	 */
 	static listFiles(auth, callback) {
 
@@ -114,6 +117,66 @@ class GDrive {
 			},
 			callback
 		);
+	}
+
+	/**
+	 * Uploads a single file with size of less than 5MB
+	 * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
+	 * @param {File} file A file to be uploaded.
+	 * @param {function} callback Callback of the operation.
+	 */
+	static simpleUpload(auth, file, callback) {
+
+		let resource = {
+			name: file.name,
+		};
+
+		let media = {
+			mimeType: file.type,
+			body: fs.createReadStream(file.path)
+		};
+
+		const drive = google.drive({ version: "v3", auth });
+
+		drive.files.create({
+			resource,
+			media,
+			fields: 'id'
+		}, 
+		callback);
+	}
+
+	/**
+	 * Uploads a single file using a resumable session
+	 * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
+	 * @param {File} file A file to be uploaded.
+	 * @param {function} callback Callback of the operation.
+	 */
+	static resumableUpload(auth, file, callback) {
+
+		let resumable = new GResumableUpload();
+		
+		resumable.tokens = auth.credentials;
+		resumable.filepath = file.path;
+		resumable.fileSize = file.size;
+		resumable.mimeType = file.type;
+		resumable.metadata = {
+			name: file.name
+		};
+		resumable.retry = 3;
+
+		resumable.on('progress', function (progress) {
+			console.log(progress);
+		});
+		resumable.on('success', function (success) {
+			callback(null, success)
+		});
+		resumable.on('error', function (error) {
+			console.log(error);
+			callback(error)
+		});
+
+		resumable.upload();
 	}
 }
 
