@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<head>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.0/css/bulma.min.css">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css">
+
+	<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+	<script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
+	<script src="./Menu.js"></script>
+</head>
+<body>
+
+	<div id="app">
+
+		<section>
+
+			<my-menu></my-menu>
+
+		</section>
+
+		<section class="section">
+
+			<div class="container">
+
+				<h1 class="title">{{title}}</h1>
+
+				<div class="file">
+
+					<label class="file-label">
+
+					  	<input class="file-input" type="file" ref="file" v-on:change="handleFileUpload()">
+
+					  	<span class="file-cta">
+
+							<span class="file-icon">
+
+								<i class="fas fa-upload"></i>
+
+							</span>
+
+							<span class="file-label">
+
+								Choose a file…
+
+							</span>
+
+					  	</span>
+
+					</label>
+
+				</div>
+
+				<button style="margin-top: 20px" class="button is-info" :disabled="!hasFile" @click="submitFile">Upload file</button>
+
+			</div>
+
+		</section>
+
+	</div>
+
+	<script>
+
+		new Vue({
+			el: '#app',
+			computed: {
+				title() {
+					return 'Upload file';
+				},
+				hasFile() {
+					return !!(this.file);
+				}
+			},
+			data() {
+				return {
+					file: ''
+				}
+			},
+			methods: {
+				handleFileUpload(){
+					this.file = this.$refs.file.files[0];
+				},
+				submitFile() {
+					let formData = new FormData();
+
+					formData.append('file', this.file);
+
+					axios.post('/upload-files?uploadType=resumable', 
+						formData,
+						{
+							headers: {
+								'Content-Type': 'multipart/form-data'
+							}
+						}
+					).then(() => toastr.success('File uploaded successfully'))
+					 .catch(err => {
+						 console.log(err);
+						 toastr.error('File upload failed');
+					 })
+				}
+			}
+		})
+
+	</script>
+
+</body>
