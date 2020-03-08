@@ -165,8 +165,6 @@ class GDrive {
 	 * @param {function} callback Callback of the operation.
 	 */
 	static listFiles(auth, callback) {
-
-		const drive = google.drive({ version: "v3", auth });
 		
 		GDrive.list(drive, `mimeType != 'application/vnd.google-apps.folder'`, callback);
 	}
@@ -178,23 +176,41 @@ class GDrive {
 	 */
 	static listFolders(auth, callback) {
 		
-		const drive = google.drive({ version: "v3", auth });
-		
-		GDrive.list(drive, `mimeType = 'application/vnd.google-apps.folder'`, callback);
+		GDrive.list(auth, `mimeType = 'application/vnd.google-apps.folder'`, callback);
 	}
 
 	/**
 	 * Performs list operation.
-	 * @param {google.drive} drive Drive object.
+	 * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
 	 * @param {function} callback Callback of the operation.
 	 */
-	static list(drive, q, callback) {
+	static list(auth, q, callback) {
+
+		const drive = google.drive({ version: "v3", auth });
 
 		drive.files.list(
 			{
 				q,
 				pageSize: 50,
 				fields: "nextPageToken, files(id, name)"
+			},
+			callback
+		);
+	}
+
+	/**
+	 * Lookups a file by id.
+	 * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
+	 * @param {function} callback Callback of the operation.
+	 */
+	static getById(auth, id, callback) {
+		
+		const drive = google.drive({ version: "v3", auth });
+
+		drive.files.get(
+			{
+				fileId: id,
+				fields: "id, name, mimeType, parents, webContentLink"
 			},
 			callback
 		);
