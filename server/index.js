@@ -3,6 +3,7 @@ const express = require("express");
 const app = express();
 const formidable = require("formidable");
 const url = require('url');
+const bodyParser = require('body-parser');
 const port = 3000;
 
 // Google drive middleware
@@ -10,13 +11,17 @@ const { GDrive } = require('./GDrive.js');
 
 // Allow node to serve static files from public directory
 app.use(express.static("public"));
+// Middleware to parse body
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(bodyParser.raw());
 
 // Api endpoints
 app.get("/list-files", (req, res) => {
 
 	GDrive.assertAccess(oAuth2Client => {
 
-		// Fetch 10 files from drive
+		// Fetch 50 files from drive
 		GDrive.listFiles(oAuth2Client, (err, gRes) => {
 
 			if (err) {
@@ -25,12 +30,45 @@ app.get("/list-files", (req, res) => {
 
 			let files = gRes.data.files;
 
-			res.send(files.map(x => {
-				return {
-					id: x.id,
-					name: x.name
-				}
-			 }));
+			res.send(files);
+		});
+	});
+});
+
+app.get("/list-folders", (req, res) => {
+
+	GDrive.assertAccess(oAuth2Client => {
+
+		// Fetch 50 folders from drive
+		GDrive.listFolders(oAuth2Client, (err, gRes) => {
+
+			if (err) {
+				return res.status(400).send({code: 'Error', message: `The API returned an error: ${err}`});
+			}
+
+			let files = gRes.data.files;
+
+			res.send(files);
+		});
+	});
+});
+
+app.get("/search", (req, res) => {
+
+	GDrive.assertAccess(oAuth2Client => {
+
+		const queryObject = url.parse(req.url,true).query;
+
+		// Get file by id
+		GDrive.getById(oAuth2Client, queryObject.id, (err, gRes) => {
+
+			if (err) {
+				return res.status(400).send({code: 'Error', message: `The API returned an error: ${err}`});
+			}
+
+			let file = gRes.data;
+
+			res.send(file);
 		});
 	});
 });
@@ -53,29 +91,46 @@ app.post("/upload-files", (req, res) => {
 
 				if (queryObject.uploadType && queryObject.uploadType == 'resumable') {
 
-					GDrive.resumableUpload(oAuth2Client, file[1], (err, file) => {
+					GDrive.resumableUpload(oAuth2Client, fields.folderId, file[1], (err, file) => {
 
 						if (err) {
 							return res.status(400).send({code: 'Error', message: `The API returned an error: ${err}`});
 						}
 
-						res.send({fileId: file.id});
+						res.send({id: file.id});
 					});
 				}
 				else {
 
 					// The entry is an array of tuples 'key - value'
-					GDrive.simpleUpload(oAuth2Client, file[1], (err, file) => {
+					GDrive.simpleUpload(oAuth2Client, fields.folderId, file[1], (err, gRes) => {
 
 						if (err) {
 							return res.status(400).send({code: 'Error', message: `The API returned an error: ${err}`});
 						}
 
-						res.send({fileId: file.id});
+						res.send({id: gRes.data.id});
 					});
 				}
 			}
 		})
+	});
+});
+
+app.post("/create-folder", (req, res) => {
+
+	let body = req.body;
+
+	GDrive.assertAccess(oAuth2Client => {
+
+		GDrive.createFolder(oAuth2Client, body.name, (err, gRes) => {
+
+			if (err) {
+				return res.status(400).send({code: 'Error', message: `The API returned an error: ${err}`});
+			}
+
+			res.send(gRes.data);
+		});
 	});
 });
 
