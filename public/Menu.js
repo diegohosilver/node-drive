@@ -7,6 +7,10 @@ Vue.component('MyMenu', {
 					title: 'List 10 files'
 				},
 				{
+					url: './create-folder.html',
+					title: 'Create folder'
+				},
+				{
 					url: './upload.html',
 					title: 'Upload file'
 				}

@@ -39,7 +39,7 @@ class GResumableUpload {
 		};
 	
 		//Send request and start upload if success
-		request.post(options, (err, res, body) => {
+		request.post(options, (err, res) => {
 	
 			if (err || !res.headers.location) {
 	
@@ -111,7 +111,7 @@ class GResumableUpload {
 				clearInterval(health);
 
 				if (!error) {
-					self.emit("success", body);
+					self.emit("success", JSON.parse(body));
 					return;
 				}
 

@@ -1,11 +1,12 @@
 // Google drive setup
 const fs = require("fs");
 const readline = require("readline");
+const request = require("request");
 const { google } = require("googleapis");
 const { GResumableUpload } = require("./GDriveResumableUpload.js");
-
 const SCOPES = ["https://www.googleapis.com/auth/drive"];
 const TOKEN_PATH = "token.json";
+const CREDENTIALS_PATH = "credentials.json";
 
 class GDrive {
 
@@ -16,7 +17,7 @@ class GDrive {
 	static assertAccess(callback) {
 		
 		// Load client secrets from a local file
-		fs.readFile("credentials.json", (err, content) => {
+		fs.readFile(CREDENTIALS_PATH, (err, content) => {
 
 			if (err)
 				return console.log("Error loading client secret file:", err);
@@ -51,9 +52,66 @@ class GDrive {
 
 			if (err) return GDrive.getAccessToken(oAuth2Client, callback);
 
-			oAuth2Client.setCredentials(JSON.parse(token));
+			let parsedToken = JSON.parse(token);
+
+			// Check if token is expired
+			if (parsedToken.expiry_date < Math.floor(Date.now() / 1000)) {
+
+				return GDrive.refreshToken(credentials.installed, parsedToken, (refreshedToken) => {
+
+					oAuth2Client.setCredentials(refreshedToken);
+
+					callback(oAuth2Client);
+				});
+			}
+
+			oAuth2Client.setCredentials(parsedToken);
 
 			callback(oAuth2Client);
+		});
+	}
+
+	/**
+	 * Manually get a new access_token, write it to local file and then return new oAuth2Client
+	 * @param {google.auth.OAuth2} oAuth2Client The OAuth2 client to get token for.
+	 * @param {Object} credentials 
+	 * @param {Object} parsedToken 
+	 * @param {function} callback 
+	 */
+	static refreshToken(credentials, parsedToken, callback) {
+
+		let options = {
+			url: 'https://oauth2.googleapis.com/token',
+			body: JSON.stringify({
+				client_id: credentials.client_id,
+				client_secret: credentials.client_secret,
+				grant_type: 'refresh_token',
+				refresh_token: parsedToken.refresh_token
+			})
+		}
+
+		// Get new access_token
+		request.post(options, (err, res) => {
+
+			if (err)
+				return callback('Could not refresh token');
+			
+			let body = JSON.parse(res.body)
+
+			parsedToken.access_token = body.access_token;
+
+			let today = new Date();
+			parsedToken.expiry_date = Math.round(today.setHours(today.getHours() + 1)/1000); // token expires in one hour
+
+			// Update token on file
+			fs.writeFile(TOKEN_PATH, JSON.stringify(parsedToken), err => {
+
+				if (err) return console.error(err);
+
+				console.log("Token stored to", TOKEN_PATH);
+			});
+
+			callback(parsedToken);
 		});
 	}
 
@@ -61,7 +119,7 @@ class GDrive {
 	 * Get and store new token after prompting for user authorization, and then
 	 * execute the given callback with the authorized OAuth2 client.
 	 * @param {google.auth.OAuth2} oAuth2Client The OAuth2 client to get token for.
-	 * @param {getEventsCallback} callback The callback for the authorized client.
+	 * @param {function} callback The callback for the authorized client.
 	 */
 	static getAccessToken(oAuth2Client, callback) {
 
@@ -102,18 +160,57 @@ class GDrive {
 	}
 
 	/**
-	 * Lists the names and IDs of up to 10 files.
+	 * Lists the names and IDs of up to 50 files.
 	 * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
 	 * @param {function} callback Callback of the operation.
 	 */
 	static listFiles(auth, callback) {
+		
+		GDrive.list(drive, `mimeType != 'application/vnd.google-apps.folder'`, callback);
+	}
+
+	/**
+	 * Lists the names and IDs of up to 50 folders.
+	 * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
+	 * @param {function} callback Callback of the operation.
+	 */
+	static listFolders(auth, callback) {
+		
+		GDrive.list(auth, `mimeType = 'application/vnd.google-apps.folder'`, callback);
+	}
+
+	/**
+	 * Performs list operation.
+	 * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
+	 * @param {function} callback Callback of the operation.
+	 */
+	static list(auth, q, callback) {
 
 		const drive = google.drive({ version: "v3", auth });
-		
+
 		drive.files.list(
 			{
-				pageSize: 10,
+				q,
+				pageSize: 50,
 				fields: "nextPageToken, files(id, name)"
+			},
+			callback
+		);
+	}
+
+	/**
+	 * Lookups a file by id.
+	 * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
+	 * @param {function} callback Callback of the operation.
+	 */
+	static getById(auth, id, callback) {
+		
+		const drive = google.drive({ version: "v3", auth });
+
+		drive.files.get(
+			{
+				fileId: id,
+				fields: "id, name, mimeType, parents, webContentLink"
 			},
 			callback
 		);
@@ -125,11 +222,15 @@ class GDrive {
 	 * @param {File} file A file to be uploaded.
 	 * @param {function} callback Callback of the operation.
 	 */
-	static simpleUpload(auth, file, callback) {
+	static simpleUpload(auth, parentId, file, callback) {
 
 		let resource = {
-			name: file.name,
+			name: file.name
 		};
+
+		if (parentId) {
+			resource['parents'] = [parentId];
+		}
 
 		let media = {
 			mimeType: file.type,
@@ -152,7 +253,7 @@ class GDrive {
 	 * @param {File} file A file to be uploaded.
 	 * @param {function} callback Callback of the operation.
 	 */
-	static resumableUpload(auth, file, callback) {
+	static resumableUpload(auth, parentId, file, callback) {
 
 		let resumable = new GResumableUpload();
 		
@@ -161,8 +262,13 @@ class GDrive {
 		resumable.fileSize = file.size;
 		resumable.mimeType = file.type;
 		resumable.metadata = {
-			name: file.name
+			name: file.name,
 		};
+
+		if (parentId) {
+			resumable.metadata['parents'] = [parentId];
+		}
+
 		resumable.retry = 3;
 
 		resumable.on('progress', function (progress) {
@@ -177,6 +283,27 @@ class GDrive {
 		});
 
 		resumable.upload();
+	}
+
+	/**
+	 * Creates a folder within the drive
+	 * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
+	 * @param {String} name Name of the folder 
+	 * @param {function} callback Callback of the operation.
+	 */
+	static createFolder(auth, name, callback) {
+
+		let metadata = {
+			name,
+			mimeType: 'application/vnd.google-apps.folder'
+		};
+
+		const drive = google.drive({ version: "v3", auth });
+
+		drive.files.create({
+			resource: metadata,
+			fields: 'id'
+		}, callback);
 	}
 }
 

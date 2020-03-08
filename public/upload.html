@@ -28,6 +28,28 @@
 
 				<h1 class="title">{{title}}</h1>
 
+				<div class="field">
+
+					<label class="label">Folder</label>
+
+					<div class="control">
+
+						<div class="select">
+
+							<select v-model="folder">
+
+								<option :value="null">ROOT</>
+
+								<option v-for="folder in folders" :value="folder">{{folder.name}}</>
+
+							</select>
+
+						</div>
+
+					</div>
+
+				</div>
+
 				<div class="file">
 
 					<label class="file-label">
@@ -76,7 +98,9 @@
 			},
 			data() {
 				return {
-					file: ''
+					file: '',
+					folders: [],
+					folder: undefined
 				}
 			},
 			methods: {
@@ -87,6 +111,11 @@
 					let formData = new FormData();
 
 					formData.append('file', this.file);
+
+					if (this.folder) {
+						
+						formData.append('folderId', this.folder.id);
+					}
 
 					axios.post('/upload-files?uploadType=resumable', 
 						formData,
@@ -101,6 +130,16 @@
 						 toastr.error('File upload failed');
 					 })
 				}
+			},
+			created() {
+
+				this.isLoading = true;
+
+				axios.get('/list-folders')
+					 .then(response => {
+							
+						this.folders = response.data;
+					 });
 			}
 		})
 
