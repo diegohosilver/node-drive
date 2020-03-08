@@ -39,7 +39,7 @@ class GResumableUpload {
 		};
 	
 		//Send request and start upload if success
-		request.post(options, (err, res, body) => {
+		request.post(options, (err, res) => {
 	
 			if (err || !res.headers.location) {
 	
