@@ -53,6 +53,26 @@ app.get("/list-folders", (req, res) => {
 	});
 });
 
+app.get("/search", (req, res) => {
+
+	GDrive.assertAccess(oAuth2Client => {
+
+		const queryObject = url.parse(req.url,true).query;
+
+		// Get file by id
+		GDrive.getById(oAuth2Client, queryObject.id, (err, gRes) => {
+
+			if (err) {
+				return res.status(400).send({code: 'Error', message: `The API returned an error: ${err}`});
+			}
+
+			let file = gRes.data;
+
+			res.send(file);
+		});
+	});
+});
+
 app.post("/upload-files", (req, res) => {
 
 	new formidable.IncomingForm().parse(req, (err, fields, files) => {
@@ -77,7 +97,7 @@ app.post("/upload-files", (req, res) => {
 							return res.status(400).send({code: 'Error', message: `The API returned an error: ${err}`});
 						}
 
-						res.send({fileId: file.id});
+						res.send({id: file.id});
 					});
 				}
 				else {

@@ -111,7 +111,7 @@ class GResumableUpload {
 				clearInterval(health);
 
 				if (!error) {
-					self.emit("success", body);
+					self.emit("success", JSON.parse(body));
 					return;
 				}
 
